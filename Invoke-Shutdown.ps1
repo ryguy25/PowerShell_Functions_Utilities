@@ -11,7 +11,7 @@ Sends a shutdown event to specified systems.  You may specify a countdown value 
 String value or String array.  You may pass a string of computer names and/or IP addresses to this function via the pipeline.  The input will be assigned to the ComputerName parameter
 
 .OUTPUTS
-System.Int.  Invoke-Shutdown will return the ReturnValue Int that is returned via the Win32ShutdownTracker method of the Win32_OperatingSystem WMI Class.
+System.Int.  Invoke-Shutdown will return the ReturnValue Int that is returned via the Win32ShutdownTracker method of the Win32_OperatingSystem WMI Class.  If the machine is unavilable, a value of -1 will be returned.  If a WMI MethodInvocationException is trapped, a value of -2 will be returned.  Any other trapped error will return a value of -256
 
 .EXAMPLE
 PS C:\> Invoke-Shutdown -ShutdownType Logoff -Force
@@ -83,68 +83,96 @@ Win32ShutdownTracker flags
         [uint32]$Timeout = 60,
 
         [Parameter()]
+        [Alias("Message")]
         [string]$Comment = "A remote shutdown was initiated via the $($MyInvocation.InvocationName) function by $([Environment]::UserName).  Your computer will $",
 
         [Parameter()]
         [uint32]$ReasonCode = 0
     )
 
-    Switch ($ShutdownType) {
-    
-        ### Win32ShutdownTracker flags.  See LINK in comment-based help  
-        "Logoff"    {$rebootFlag = 0}
-        "Shutdown"  {$rebootFlag = 1}
-        "Reboot"    {$rebootFlag = 2}
-        "PowerOff"  {$rebootFlag = 8}
-        default     {$rebootFlag = 0}
-
-    }
+    Begin {
         
-    if ($Force) {
+        Switch ($ShutdownType) {
     
-        ### Adding 4 to the $rebootFlag value adds the "force" flag to the shutdown command
-        $rebootFlag += 4
-    
-    }
-    
-    Write-Verbose "Shutdown Type (int value) requested is: $rebootFlag"
+            ### Win32ShutdownTracker flags.  See LINK in comment-based help  
+            "Logoff"    {$rebootFlag = 0}
+            "Shutdown"  {$rebootFlag = 1}
+            "Reboot"    {$rebootFlag = 2}
+            "PowerOff"  {$rebootFlag = 8}
+            default     {$rebootFlag = 0}
 
-    foreach ($computer in $ComputerName) {
+        }
+        
+        if ($Force) {
     
-        Try {
-    
-            Write-Verbose "Testing Connection to $computer..."
-    
-            if (Test-Connection $ComputerName -Quiet) {
-    
-                $win32OS = Get-WmiObject -Class Win32_OperatingSystem -ComputerName $ComputerName -EnableAllPrivileges
-                $result = $win32OS.Win32ShutdownTracker($Timeout, $Comment, $ReasonCode, $rebootFlag)
-
-                ### Verbose output for $result.ReturnValue
-                switch ($result.ReturnValue) {
-    
-                    0 {Write-Verbose "$($MyInvocation.InvocationName) on $ComputerName processed successfully"}
-                    1191 {Write-Verbose "$($MyInvocation.InvocationName) on $ComputerName returned error code 1191.  A user is still logged into the system.  Use the -Force parameter if necessary."}
-                    default {Write-Verbose "$($MyInvocation.InvocationName) on $ComputerName returned error code $result.  System Error Codes can be found here:  https://msdn.microsoft.com/en-us/library/ms681381(v=vs.85).aspx"}
-    
-                }    
-            
-            }
-    
-            else {
-    
-                Write-Error "$ComputerName is not currently available.  No shutdown request processed" -Category ConnectionError
-    
-            }
+            ### Adding 4 to the $rebootFlag value adds the "force" flag to the shutdown command
+            $rebootFlag += 4
     
         }
     
-        Catch {
+        Write-Verbose "Shutdown Type (int value) requested is: $rebootFlag"
+
+    }
+
+    Process {
+
+        foreach ($computer in $ComputerName) {
     
-            Write-Error $_.Exception.Message
+            Try {
     
+                Write-Verbose "Testing Connection to $computer..."
+                
+                if (Test-Connection $ComputerName -Quiet) {
+    
+                    $win32OS = Get-WmiObject -Class Win32_OperatingSystem -ComputerName $ComputerName -EnableAllPrivileges
+                    $result = $win32OS.Win32ShutdownTracker($Timeout, $Comment, $ReasonCode, $rebootFlag)
+
+                    ### Verbose output for $result.ReturnValue
+                    switch ($result.ReturnValue) {
+    
+                        0 {Write-Verbose "$($MyInvocation.InvocationName) on $ComputerName processed successfully"}
+                        1191 {Write-Verbose "$($MyInvocation.InvocationName) on $ComputerName returned error code 1191.  A user is still logged into the system.  Use the -Force parameter if necessary."}
+                        default {Write-Verbose "$($MyInvocation.InvocationName) on $ComputerName returned error code $result.  System Error Codes can be found here:  https://msdn.microsoft.com/en-us/library/ms681381(v=vs.85).aspx"}
+    
+                    }    
+
+                    return $result.ReturnValue
+            
+                }
+    
+                else {
+    
+                    Write-Error "$ComputerName is not currently available.  No shutdown request processed" -Category ConnectionError -ErrorVariable +connectionErrors
+                    return -1
+    
+                }
+    
+            }
+
+            Catch [System.Management.Automation.MethodInvocationException] {
+
+                Write-Verbose "Generic Failure? - Might be caused if ShutdownType 'Logoff' was used and no user was logged in at the time"
+                Write-Error $_
+                return -2
+
+            }
+    
+            Catch {
+
+                Write-Verbose "Error Type is $($_.Exception.GetType().FullName)"
+                Write-Error $_
+                return -256
+    
+            }
+
         }
 
     }    
+
+    End {
+    
+        Write-Verbose "Invoke-Shutdown processing complete.  There were $($connectionErrors.Count) connection errors."
+
+    }
 
 }
