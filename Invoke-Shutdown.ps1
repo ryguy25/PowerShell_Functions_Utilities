@@ -5,41 +5,39 @@ function Invoke-Shutdown
 Invoke-Shutdown utilizes the WMI Method Win32ShutdownTracker of the Win32_OperatingSystem WMI Class to request a shutdown event.
 
 .DESCRIPTION
-Sends a shutdown event to specified systems.  You may specify a countdown value to delay a shutdown/reboot request and/or a 
-message to be displayed to any logged in user.
+Sends a shutdown event to specified systems.  You may specify a countdown value to delay a shutdown/reboot request and/or a message to be displayed to any logged in user.
 
 .INPUTS
-String value or String array.  You may pass a string of computer names and/or IP addresses to this function via the pipeline.
-The input will be assigned to the ComputerName parameter
+String value or String array.  You may pass a string of computer names and/or IP addresses to this function via the pipeline.  The input will be assigned to the ComputerName parameter
 
 .OUTPUTS
-System.Int.  Invoke-Shutdown will return the ReturnValue Int that is returned via the Win32ShutdownTracker method of the 
-Win32_OperatingSystem WMI Class.
+System.Int.  Invoke-Shutdown will return the ReturnValue Int that is returned via the Win32ShutdownTracker method of the Win32_OperatingSystem WMI Class.
 
 .EXAMPLE
 PS C:\> Invoke-Shutdown -ShutdownType Logoff -Force
+
 This would initiate a forced logoff on the local system with the default timeout of 60 seconds
 
 .EXAMPLE
 PS C:\> Invoke-Shutdown -ComputerName Workstation1.contoso.com -ShutdownType Reboot -Timeout 15
+
 This would initiate a reboot on a machine with no user logged in.  If a user is logged in, you will see a return value of 1191.
 
 .EXAMPLE
 PS C:\> "Computer1.contoso.com" | Invoke-Shutdown -ShutdownType Logoff -Force -Timeout 120 -Comment "Logoff required.  You have 120 seconds before you are forcefully logged off.  --Administrator"
-This command takes the "Computer1.contoso.com" string as pipeline input for the ComputerName parameter and processes a forced Logoff event
-with a 120 second timeout value.  A custom message is displayed to the end user via the Comment parameter.
+
+This command takes the "Computer1.contoso.com" string as pipeline input for the ComputerName parameter and processes a forced Logoff event with a 120 second timeout value.  A custom message is displayed to the end user via the Comment parameter.
 
 .PARAMETER ComputerName
-Takes one or more computer names or IP addresses as input.  If no value is passed, it is assumed that you wish to process this function
-against the local machine ($env:COMPUTERNAME).  This parameter also accepts input via the pipeline.
+Takes one or more computer names or IP addresses as input.  If no value is passed, it is assumed that you wish to process this function against the local machine ($env:COMPUTERNAME).  This parameter also accepts input via the pipeline.
 
 .PARAMETER ShutdownType
 The Win32ShutdownTracker method has four unique shutdown types available:  Logoff, Shutdown, Reboot, or PowerOff
+
 This parameter is mandatory and must be specified.  The ValidateSet attribute will force one of the four parameter values specified above.
 
 .PARAMETER Force
-You can use the -Force switch to add the "Force" flag to the Win32ShutdownTracker method.  This will force the ShutdownType specified to be
-processed regardless of end-user input
+You can use the -Force switch to add the "Force" flag to the Win32ShutdownTracker method.  This will force the ShutdownType specified to be processed regardless of end-user input
 
 .PARAMETER Timeout
 An optional parameter to allow a specified timeout value for the Win32ShutdownTracker method.  The default value for this parameter is 60.
@@ -48,20 +46,19 @@ An optional parameter to allow a specified timeout value for the Win32ShutdownTr
 An optional parameter to allow you to specify a custom message to be displayed to any logged on users.
 
 .PARAMETER ReasonCode
-An optional parameter that allows you to specify a reason code for the shutdown event.  This is primarily used in Windows Server operating
-systems that allows a shutdown reason to be recorded in the Event Log for auditing purposes.  Microsoft provides a list of hexadecimal
-major/minor reason flags.  The major/minor reason values should be added together and then converted to an unsigned int value.
+An optional parameter that allows you to specify a reason code for the shutdown event.  This is primarily used in Windows Server operating systems that allows a shutdown reason to be recorded in the Event Log for auditing purposes.  Microsoft provides a list of hexadecimal major/minor reason flags.  The major/minor reason values should be added together and then converted to an unsigned int value.
 
 .LINK
-Microsoft System Shutdown Reason Codes
-https://msdn.microsoft.com/en-us/library/windows/desktop/aa376885(v=vs.85).aspx
-
-.LINK
-Win32ShutdownTracker flags
-https://msdn.microsoft.com/en-us/library/aa394057(v=vs.85).aspx
+https://github.com/ryguy25/PowerShellUtilities/blob/master/Invoke-Shutdown.ps1
 
 .LINK
 Github (ryguy25)
+
+https://msdn.microsoft.com/en-us/library/windows/desktop/aa376885(v=vs.85).aspx
+Microsoft System Shutdown Reason Codes
+
+https://msdn.microsoft.com/en-us/library/aa394057(v=vs.85).aspx
+Win32ShutdownTracker flags
 
 .NOTES
   Author:  Ryan Brown
