@@ -70,7 +70,7 @@ PARAM (
 
     Catch {
 
-        Write-Error
+        Write-Error $_.Exception.Message
 
     }
 
